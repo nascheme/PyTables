@@ -81,7 +81,7 @@ jobs:
       fail-fast: false
       matrix:
         #build: ['cp*']
-        build: ['cp314t']
+        build: ['cp314t-manylinux_x86_64']
         arch: ['native']
         #os: ['ubuntu-latest', 'ubuntu-24.04-arm', 'macos-latest', 'windows-latest', 'macos-15-intel']
         os: ['ubuntu-latest']
@@ -150,6 +150,7 @@ jobs:
         env:
           CIBW_BUILD: '${{ matrix.build }}'
           CIBW_ARCHS: '${{ matrix.arch }}'
+          CIBW_SKIP: ''
 
       - name: Copy requirements.txt
         run: |
