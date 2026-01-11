@@ -63,6 +63,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Database",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -129,12 +130,16 @@ tables = [ "*.dll", "*.so*", "*.dylib" ]
 "tables.nodes.tests" = [ "*.dat", "*.xbm", "*.h5" ]
 
 [tool.cibuildwheel]
-skip = "*-musllinux_* cp310*"
+# cp314t segfaults, see https://github.com/PyTables/PyTables/issues/1269
+# cp314 has failures on Windows, see https://github.com/PyTables/PyTables/pull/1286#issuecomment-3719953407
+skip = "*-musllinux_* cp314t* cp314-win_amd64*"
+archs = "native"
 build = "cp*"
 build-verbosity = 1
+# Run tests under gdb to get full backtrace on crash
 test-command = [
     "python -c \"import tables; keys = 'zlib bzip2 blosc blosc2'.split(); missing = [key for key in keys if tables.which_lib_version(key) is None]; assert missing == [], missing\"",
-    "python -m tables.tests.test_all",
+    "gdb -batch -ex 'set pagination off' -ex run -ex 'thread apply all bt full' -ex quit --args python -m tables.tests.test_all",
 ]
 test-skip = "*_aarch64"
 # Keep in sync with ``build-system.requires`` above
@@ -146,13 +151,14 @@ before-all = [
     "rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux",
     "yum -y install epel-release",
     "yum -y update",
-    "yum install -y zlib-devel bzip2-devel",
+    "yum install -y zlib-devel bzip2-devel gdb",
 ]
 
 [tool.cibuildwheel.linux.environment]
 HDF5_DIR = "/tmp/hdf5"
 DISABLE_AVX2 = "true"
-CFLAGS = "-g0"
+# Use -g for debug symbols instead of -g0 to get better crash backtraces
+CFLAGS = "-g"
 LD_LIBRARY_PATH = "/tmp/hdf5/lib:${LD_LIBRARY_PATH}"
 PKG_CONFIG_PATH = "/tmp/hdf5/lib/pkgconfig:${PKG_CONFIG_PATH}"
 

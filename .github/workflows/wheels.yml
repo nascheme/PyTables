@@ -33,43 +33,43 @@ permissions:
   contents: read
 
 jobs:
-  build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.7
-        with:
-          fetch-depth: 0
-          submodules: true
-
-      - uses: actions/setup-python@2e3e4b15a884dc73a63f962bff250a855150a234 # v5.1.1
-        name: Install Python
-        with:
-          python-version: 3.x
-
-      - name: Install APT packages
-        if: contains(${{ matrix.os }}, 'ubuntu')
-        run: |
-          sudo apt update
-          # Keep in sync with "Prerequisites" in User's Guide.
-          sudo apt install libbz2-dev libhdf5-serial-dev
-          sudo apt install latexmk texlive-fonts-recommended texlive-latex-recommended texlive-latex-extra texlive-plain-generic
-
-      - name: Install dependencies
-        run: |
-          # Keep in sync with ``build-system.requires`` in ``pyproject.toml``.
-          python -m pip install --require-hashes -r .github/workflows/requirements/build-requirements.txt
-          python -m pip install --require-hashes -r requirements.txt
-          python -m pip install --require-hashes -r requirements-docs.txt
-
-      - name: Build dist (sdist and docs)
-        run: make PYTHON=python dist
-
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          path: dist/*
-          name: dist
-
+##  build_sdist:
+##    name: Build source distribution
+##    runs-on: ubuntu-latest
+##    steps:
+##      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+##        with:
+##          fetch-depth: 0
+##          submodules: true
+##
+##      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+##        name: Install Python
+##        with:
+##          python-version: 3.x
+##
+##      - name: Install APT packages
+##        if: contains(${{ matrix.os }}, 'ubuntu')
+##        run: |
+##          sudo apt update
+##          # Keep in sync with "Prerequisites" in User's Guide.
+##          sudo apt install libbz2-dev libhdf5-serial-dev
+##          sudo apt install latexmk texlive-fonts-recommended texlive-latex-recommended texlive-latex-extra texlive-plain-generic
+##
+##      - name: Install dependencies
+##        run: |
+##          # Keep in sync with ``build-system.requires`` in ``pyproject.toml``.
+##          python -m pip install --require-hashes -r .github/workflows/requirements/build-requirements.txt
+##          python -m pip install --require-hashes -r requirements.txt
+##          python -m pip install --require-hashes -r requirements-docs.txt
+##
+##      - name: Build dist (sdist and docs)
+##        run: make PYTHON=python dist
+##
+##      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+##        with:
+##          path: dist/*
+##          name: dist
+##
   build_wheels:
     name: Build ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build }} wheels
     runs-on: ${{ matrix.os }}
@@ -80,33 +80,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-            build: 'cp*'
-          # - os: macos-15-intel
-          #   arch: x86_64
-          #   build: 'cp*'
-          - os: macos-latest
-            arch: arm64
-            build: 'cp*'
-          - os: windows-latest
-            arch: AMD64
-            build: 'cp*'
-          - os: ubuntu-24.04-arm
-            arch: aarch64
-            build: 'cp*'
+        #build: ['cp*']
+        build: ['cp314t-manylinux_x86_64']
+        arch: ['native']
+        #os: ['ubuntu-latest', 'ubuntu-24.04-arm', 'macos-latest', 'windows-latest', 'macos-15-intel']
+        os: ['ubuntu-latest']
 
     steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.7
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
           submodules: true
 
-      - uses: actions/setup-python@2e3e4b15a884dc73a63f962bff250a855150a234 # v5.1.1
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         name: Install Python on Unix
         with:
-          python-version: '3.12'
+          python-version: '3.14'
         if: runner.os != 'Windows'
 
       - name: Install Python and dependencies on Windows
@@ -114,18 +103,18 @@ jobs:
         with:
           environment-name: build
           create-args: >
-            python=3.12 blosc c-blosc2 bzip2 hdf5 lz4 snappy zstd zlib pkgconfig
+            python=3.14 blosc c-blosc2 bzip2 hdf5 lz4 snappy zstd zlib pkgconfig
           init-shell: bash powershell
         if: runner.os == 'Windows'
 
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         id: deps-cache
         with:
           path: hdf5_build
           # Instead of a hashFiles('**/wheels.yml') appended here, just use a counter.
           # It allows us to modify this file without having to constantly rebuild HDF5
           # (which takes almost an hour on Linux emulated aarch64).
-          key: ${{ runner.os }}-${{ matrix.arch }}-deps-cache-${{ hashFiles('**/get_hdf5.sh') }}-${{ env.HDF5_VERSION }}-1
+          key: ${{ matrix.os }}-${{ matrix.arch }}-deps-cache-${{ hashFiles('**/get_hdf5.sh') }}-${{ env.HDF5_VERSION }}
         if: runner.os != 'Windows'
 
       - name: Build dependencies
@@ -137,10 +126,19 @@ jobs:
         run: |
           mkdir hdf5_build
           if [[ "${{ runner.os }}" = 'Linux' ]]; then
-            docker run --rm -e HDF5_DIR=/io/hdf5_build -e CFLAGS="$CFLAGS" -e HDF5_VERSION="$HDF5_VERSION" -v `pwd`:/io:rw quay.io/pypa/manylinux2014_${{ matrix.arch }} /io/ci/github/get_hdf5.sh
+            ARCH=${{ matrix.arch }}
+            if [[ "$ARCH" = 'native' ]]; then
+              ARCH=$(uname -m)
+            fi
+            docker run --rm -e HDF5_DIR=/io/hdf5_build -e CFLAGS="$CFLAGS" -e HDF5_VERSION="$HDF5_VERSION" -v `pwd`:/io:rw quay.io/pypa/manylinux2014_${ARCH} /io/ci/github/get_hdf5.sh
           else
             HDF5_DIR=`pwd`/hdf5_build ci/github/get_hdf5.sh
           fi
+
+      - name: Install patchelf
+        if: runner.os != 'Windows'
+        run: |
+          python -m pip install patchelf
 
       - name: Install cibuildwheel
         run: |
@@ -152,55 +150,66 @@ jobs:
         env:
           CIBW_BUILD: '${{ matrix.build }}'
           CIBW_ARCHS: '${{ matrix.arch }}'
+          CIBW_SKIP: ''
 
       - name: Copy requirements.txt
         run: |
           cp requirements.txt ./wheelhouse/
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           path: |
             ./wheelhouse/*.whl
             ./wheelhouse/*.txt
           name: cibw-wheels-${{ matrix.os }}-${{ matrix.arch }}-${{ strategy.job-index }}
 
-  twine_check:
-    needs: [ build_sdist, build_wheels ]
-    name: Twine check
-    runs-on: 'ubuntu-latest'
+      - name: debug on failure
+        if: failure() && github.event_name == 'workflow_dispatch'
+        uses: mxschmitt/action-tmate@v3
 
-    steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.7
-        with:
-          fetch-depth: 0
-          submodules: true
 
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v4.1.8
-        with:
-          pattern: '*'
-          merge-multiple: true
-          path: wheelhouse
-
-      - name: List downloaded artifacts
-        run: ls -alR ./wheelhouse/
-
-      - name: Install Python
-        uses: actions/setup-python@2e3e4b15a884dc73a63f962bff250a855150a234 # v5.1.1
-        with:
-          python-version: '3.x'
-
-      - name: Install twine
-        run: |
-          python -m pip install --require-hashes -r ./.github/workflows/requirements/wheels-requirements.txt
-
-      - name: Check sdist and wheels
-        run: |
-          python -m twine check *.whl tables-*.tar.gz
-        working-directory: wheelhouse
-
-      - name: Upload wheel
-        uses: scientific-python/upload-nightly-action@b36e8c0c10dbcfd2e05bf95f17ef8c14fd708dbf # 0.6.2
-        if: github.repository == 'PyTables/PyTables' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        with:
-          artifacts_path: wheelhouse
-          anaconda_nightly_upload_token: ${{secrets.ANACONDA_ORG_UPLOAD_TOKEN}}
+##  twine_check:
+##    needs: [ build_sdist, build_wheels ]
+##    name: Twine check
+##    runs-on: 'ubuntu-latest'
+##
+##    steps:
+##      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+##        with:
+##          fetch-depth: 0
+##          submodules: true
+##
+##      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+##        with:
+##          pattern: '*'
+##          merge-multiple: true
+##          path: wheelhouse
+##
+##      - name: List downloaded artifacts
+##        run: ls -alR ./wheelhouse/
+##
+##      - name: Install Python
+##        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+##        with:
+##          python-version: '3.x'
+##
+##      - name: Install patchelf
+##        if: runner.os != 'Windows'
+##        run: |
+##          python -m pip install patchelf
+##
+##      - name: Install twine
+##        run: |
+##          python -m pip install --require-hashes -r ./.github/workflows/requirements/wheels-requirements.txt
+##
+##      - name: Check sdist and wheels
+##        run: |
+##          python -m twine check *.whl tables-*.tar.gz
+##        working-directory: wheelhouse
+##
+##      - name: Upload wheel
+##        uses: scientific-python/upload-nightly-action@5748273c71e2d8d3a61f3a11a16421c8954f9ecf # 0.6.3
+##        if: github.repository == 'PyTables/PyTables' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+##        with:
+##          artifacts_path: wheelhouse
+##          anaconda_nightly_upload_token: ${{secrets.ANACONDA_ORG_UPLOAD_TOKEN}}

@@ -375,9 +375,11 @@ class BasePackage:
         for location in locations:
             for prefix in self._runtime_prefixes:
                 for suffix in self._runtime_suffixes:
-                    abs_path = f"{location}/{prefix}{self.runtime_name}{suffix}"
+                    abs_path = (
+                        f"{location}/{prefix}{self.runtime_name}{suffix}"
+                    )
                     # Debug: print("find_runtime_path() trying ", abs_path)
-                          
+
                     try:
                         ctypes.CDLL(abs_path)
                     except OSError:
@@ -514,7 +516,7 @@ class BasePackage:
                     directories[idx] = Path(path[: path.rfind(name)])
                 else:
                     directories[idx] = Path(path).parent
-            #else:
+            # else:
             #    print("Warning: path is not set.")
         return tuple(directories)
 
@@ -1061,8 +1063,16 @@ if __name__ == "__main__":
                 # developer should have it installed, so it should not be
                 # a hard requisite
                 from Cython.Build import cythonize
+                from Cython import __version__ as cython_version
 
-                cythonize(str(extpfile), language_level="2")
+                compiler_directives = {}
+                if Version(cython_version) >= Version("3.1.0b1"):
+                    compiler_directives["freethreading_compatible"] = True
+
+                cythonize(
+                    str(extpfile),
+                    compiler_directives=compiler_directives,
+                    language_level="2")
             extfiles[extname] = extcfile
 
         return extfiles
